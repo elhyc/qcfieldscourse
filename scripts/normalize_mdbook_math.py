@@ -9,6 +9,7 @@ from pathlib import Path
 
 INLINE_DOLLAR = re.compile(r"(?<!\\)\$(?!\$)(.+?)(?<!\\)\$(?!\$)")
 SINGLE_LINE_DISPLAY = re.compile(r"(?<!\\)\$\$(.+?)(?<!\\)\$\$")
+MARKDOWN_ESCAPE_IN_MATH = re.compile(r"(?<!\\)([_*|])")
 
 
 def normalize_macros(text: str) -> str:
@@ -26,12 +27,22 @@ def escape_display_linebreaks(text: str) -> str:
     return text.replace(r"\\", r"\\\\")
 
 
+def escape_markdown_in_math(text: str) -> str:
+    """Hide Markdown punctuation that should reach MathJax unchanged."""
+    return MARKDOWN_ESCAPE_IN_MATH.sub(r"\\\1", text)
+
+
 def normalize_inline_math(text: str) -> str:
     """Convert Jupyter-style inline dollars outside inline code spans."""
     parts = re.split(r"(`+[^`]*`+)", text)
+
+    def replace_inline(match: re.Match[str]) -> str:
+        content = escape_markdown_in_math(match.group(1))
+        return rf"\\({content}\\)"
+
     for index, part in enumerate(parts):
         if index % 2 == 0:
-            parts[index] = INLINE_DOLLAR.sub(r"\\\\(\1\\\\)", part)
+            parts[index] = INLINE_DOLLAR.sub(replace_inline, part)
     return "".join(parts)
 
 
@@ -59,7 +70,8 @@ def normalize_markdown(text: str) -> str:
                 output.append(line.replace("$$", r"\\]", 1))
                 in_display = False
             else:
-                output.append(escape_display_linebreaks(line))
+                line = escape_display_linebreaks(line)
+                output.append(escape_markdown_in_math(line))
             continue
 
         if stripped == "$$":
@@ -74,6 +86,7 @@ def normalize_markdown(text: str) -> str:
 
         def replace_display(match: re.Match[str]) -> str:
             content = escape_display_linebreaks(match.group(1))
+            content = escape_markdown_in_math(content)
             return rf"\\[{content}\\]"
 
         line = SINGLE_LINE_DISPLAY.sub(replace_display, line)
