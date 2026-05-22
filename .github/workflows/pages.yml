@@ -42,6 +42,14 @@ jobs:
       - name: Normalize notebook math for mdBook
         run: python scripts/normalize_mdbook_math.py src/part-1.md
 
+      - name: Copy notebook image assets
+        run: |
+          shopt -s nullglob
+          files=( *.png *.jpg *.jpeg *.gif *.svg )
+          if [ ${#files[@]} -gt 0 ]; then
+            cp "${files[@]}" src/
+          fi
+
       - name: Build book
         run: mdbook build
 
