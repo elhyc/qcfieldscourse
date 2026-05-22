@@ -9,4 +9,4 @@ mathjax-support = true
 site-url = "/qcfieldscourse/"
 git-repository-url = "https://github.com/elhyc/qcfieldscourse"
 edit-url-template = "https://github.com/elhyc/qcfieldscourse/edit/main/{path}"
-git-repository-icon = "fa-github"
+git-repository-icon = "fab-github"
