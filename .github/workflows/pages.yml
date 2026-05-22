@@ -39,6 +39,9 @@ jobs:
       - name: Convert notebook to mdBook chapter
         run: python -m jupyter nbconvert --to markdown qc1.ipynb --output part-1 --output-dir src
 
+      - name: Normalize notebook math for mdBook
+        run: python scripts/normalize_mdbook_math.py src/part-1.md
+
       - name: Build book
         run: mdbook build
 
