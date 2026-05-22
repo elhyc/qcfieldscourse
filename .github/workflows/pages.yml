@@ -53,6 +53,11 @@ jobs:
       - name: Build book
         run: mdbook build
 
+      - name: Preserve applet assets
+        run: |
+          mkdir -p book/applets
+          cp -r src/applets/* book/applets/
+
       - name: Preserve existing HTML notes
         run: cp qc1.html book/qc1.html
 

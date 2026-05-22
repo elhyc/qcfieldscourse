@@ -1,0 +1,1225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grover Reflections Applet</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f2;
+      --surface: #ffffff;
+      --surface-2: #f0f3ef;
+      --ink: #17201c;
+      --muted: #65716c;
+      --line: #d8dfd8;
+      --bad: #d27b2c;
+      --bad-soft: #fff1df;
+      --good: #078668;
+      --good-soft: #dcf7ef;
+      --state: #2f5fb3;
+      --oracle: #b53a5e;
+      --diffusion: #7354b8;
+      --trail: #a8b1ad;
+      --shadow: 0 12px 32px rgba(24, 37, 32, 0.1);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.2)),
+        var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .applet {
+      width: min(1180px, calc(100vw - 24px));
+      margin: 0 auto;
+      padding: 20px 0 24px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 14px;
+    }
+
+    .title-block {
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 1.1rem + 1vw, 2rem);
+      letter-spacing: 0;
+      line-height: 1.1;
+    }
+
+    .formula {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .formula code,
+    .stat-value code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.94em;
+      background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 2px 5px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .viz-shell,
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .viz-shell {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .viz-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .step-tabs {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tab {
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      color: var(--ink);
+      border-radius: 999px;
+      min-height: 34px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    .tab[aria-pressed="true"] {
+      border-color: color-mix(in srgb, var(--state) 42%, var(--line));
+      background: color-mix(in srgb, var(--state) 12%, white);
+      color: #173b75;
+      font-weight: 700;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--swatch);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .viz-wrap {
+      position: relative;
+      aspect-ratio: 1.25 / 1;
+      width: 100%;
+      min-height: 420px;
+      background:
+        linear-gradient(90deg, rgba(23, 32, 28, 0.045) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(23, 32, 28, 0.045) 1px, transparent 1px);
+      background-size: 44px 44px;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .axis-line {
+      stroke-linecap: round;
+      stroke-width: 2.5;
+    }
+
+    .bad-axis {
+      stroke: var(--bad);
+    }
+
+    .good-axis {
+      stroke: var(--good);
+    }
+
+    .s-axis {
+      stroke: var(--state);
+      stroke-width: 2.2;
+      stroke-dasharray: 7 7;
+      stroke-linecap: round;
+    }
+
+    .reflection-line {
+      stroke: var(--diffusion);
+      stroke-width: 2;
+      stroke-dasharray: 5 8;
+      stroke-linecap: round;
+      opacity: 0.85;
+    }
+
+    .trail-line {
+      stroke: var(--trail);
+      stroke-width: 1.6;
+      stroke-dasharray: 3 7;
+      fill: none;
+      opacity: 0.68;
+    }
+
+    .trail-dot {
+      fill: white;
+      stroke: var(--trail);
+      stroke-width: 1.8;
+    }
+
+    .arc {
+      fill: none;
+      stroke-linecap: round;
+      stroke-width: 3;
+    }
+
+    .theta-arc {
+      stroke: var(--state);
+    }
+
+    .rotation-arc {
+      stroke: var(--diffusion);
+      stroke-dasharray: 5 6;
+    }
+
+    .oracle-arc {
+      stroke: var(--oracle);
+      stroke-dasharray: 2 6;
+    }
+
+    .prob-band-good {
+      fill: var(--good-soft);
+    }
+
+    .prob-band-bad {
+      fill: var(--bad-soft);
+    }
+
+    .vector {
+      stroke-linecap: round;
+      stroke-width: 4.5;
+      fill: none;
+      filter: drop-shadow(0 2px 4px rgba(23, 32, 28, 0.16));
+    }
+
+    .state-vector {
+      stroke: var(--state);
+    }
+
+    .oracle-vector {
+      stroke: var(--oracle);
+      stroke-width: 3.5;
+      stroke-dasharray: 6 6;
+      opacity: 0.82;
+    }
+
+    .next-vector {
+      stroke: var(--diffusion);
+      stroke-width: 3.5;
+      stroke-dasharray: 9 7;
+      opacity: 0.86;
+    }
+
+    .vector-point {
+      fill: white;
+      stroke-width: 3;
+    }
+
+    .state-point {
+      stroke: var(--state);
+    }
+
+    .oracle-point {
+      stroke: var(--oracle);
+    }
+
+    .next-point {
+      stroke: var(--diffusion);
+    }
+
+    .svg-label {
+      font-size: 15px;
+      font-weight: 750;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+
+    .svg-label.small {
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .label-bad {
+      fill: var(--bad);
+    }
+
+    .label-good {
+      fill: var(--good);
+    }
+
+    .label-state {
+      fill: var(--state);
+    }
+
+    .label-oracle {
+      fill: var(--oracle);
+    }
+
+    .label-diffusion {
+      fill: var(--diffusion);
+    }
+
+    .readout-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border-top: 1px solid var(--line);
+    }
+
+    .readout {
+      padding: 11px 14px;
+      border-right: 1px solid var(--line);
+      min-width: 0;
+    }
+
+    .readout:last-child {
+      border-right: 0;
+    }
+
+    .readout-label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 3px;
+    }
+
+    .readout-value {
+      font-size: clamp(1rem, 0.9rem + 0.55vw, 1.35rem);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .panel {
+      padding: 14px;
+    }
+
+    .panel + .panel {
+      margin-top: 16px;
+    }
+
+    .control-group {
+      padding: 0 0 15px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .control-group:last-child {
+      padding-bottom: 0;
+      margin-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .control-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 9px;
+      font-size: 0.88rem;
+      font-weight: 800;
+    }
+
+    .value-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 58px;
+      min-height: 28px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      font-size: 0.82rem;
+      font-weight: 750;
+    }
+
+    .range-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--good);
+    }
+
+    .hint-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      min-height: 18px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .icon-button {
+      min-height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      color: var(--ink);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-weight: 800;
+    }
+
+    .icon-button:hover,
+    .tab:hover {
+      border-color: color-mix(in srgb, var(--state) 35%, var(--line));
+      background: color-mix(in srgb, var(--state) 8%, white);
+    }
+
+    .icon-button:focus-visible,
+    .tab:focus-visible,
+    input:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--state) 34%, transparent);
+      outline-offset: 2px;
+    }
+
+    .icon-button.primary {
+      background: var(--ink);
+      color: white;
+      border-color: var(--ink);
+    }
+
+    .icon-button svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2.4;
+    }
+
+    .toggle-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .toggle {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 750;
+      user-select: none;
+    }
+
+    .toggle input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--state);
+      margin: 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 9px;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      min-height: 27px;
+      border-bottom: 1px solid rgba(216, 223, 216, 0.72);
+      padding-bottom: 7px;
+    }
+
+    .stat:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .stat-value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      text-align: right;
+      min-width: fit-content;
+    }
+
+    .success-meter {
+      height: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--bad-soft);
+      margin-top: 10px;
+    }
+
+    .success-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--good), #22a1a4);
+      border-radius: inherit;
+      transition: width 180ms ease;
+    }
+
+    .notes {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      .legend {
+        justify-content: flex-start;
+      }
+
+      .viz-wrap {
+        min-height: 360px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .applet {
+        width: min(100vw - 14px, 1180px);
+        padding-top: 10px;
+      }
+
+      .viz-header {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      .readout-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .readout {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .readout:last-child {
+        border-bottom: 0;
+      }
+
+      .button-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .toggle-row {
+        grid-template-columns: 1fr;
+      }
+
+      .viz-wrap {
+        aspect-ratio: 0.92 / 1;
+        min-height: 380px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="applet">
+    <div class="topbar">
+      <div class="title-block">
+        <h1>Grover reflections</h1>
+        <div class="formula">
+          <code>|s> = cos(theta)|bad> + sin(theta)|good></code>
+          <span aria-hidden="true"> · </span>
+          <code>G = reflection about |s> after oracle reflection</code>
+        </div>
+      </div>
+    </div>
+
+    <section class="layout" aria-label="Grover reflections interactive applet">
+      <div class="viz-shell">
+        <div class="viz-header">
+          <div class="step-tabs" role="group" aria-label="Reflection stage">
+            <button class="tab" type="button" data-stage="0" aria-pressed="true">State</button>
+            <button class="tab" type="button" data-stage="1" aria-pressed="false">Oracle</button>
+            <button class="tab" type="button" data-stage="2" aria-pressed="false">Diffusion</button>
+          </div>
+          <div class="legend" aria-label="Vector legend">
+            <span class="legend-item"><span class="swatch" style="--swatch: var(--state);"></span>current</span>
+            <span class="legend-item"><span class="swatch" style="--swatch: var(--oracle);"></span>after oracle</span>
+            <span class="legend-item"><span class="swatch" style="--swatch: var(--diffusion);"></span>after diffusion</span>
+          </div>
+        </div>
+
+        <div class="viz-wrap">
+          <svg id="grover-svg" viewBox="0 0 760 600" role="img" aria-labelledby="svg-title svg-desc">
+            <title id="svg-title">Grover operator geometry</title>
+            <desc id="svg-desc">A two-dimensional amplitude plane with bad and good axes, the equal superposition axis, and the two reflections making one Grover rotation.</desc>
+            <defs>
+              <marker id="arrow-state" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--state)"></path>
+              </marker>
+              <marker id="arrow-oracle" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--oracle)"></path>
+              </marker>
+              <marker id="arrow-diffusion" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--diffusion)"></path>
+              </marker>
+              <marker id="arrow-axis-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--bad)"></path>
+              </marker>
+              <marker id="arrow-axis-good" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--good)"></path>
+              </marker>
+            </defs>
+
+            <g id="plot">
+              <path id="good-band" class="prob-band-good" opacity="0.7"></path>
+              <path id="bad-band" class="prob-band-bad" opacity="0.72"></path>
+              <line id="bad-axis" class="axis-line bad-axis" marker-end="url(#arrow-axis-bad)"></line>
+              <line id="good-axis" class="axis-line good-axis" marker-end="url(#arrow-axis-good)"></line>
+              <line id="s-axis" class="s-axis"></line>
+              <line id="reflection-line" class="reflection-line"></line>
+              <path id="trail" class="trail-line"></path>
+              <g id="trail-dots"></g>
+              <path id="theta-arc" class="arc theta-arc"></path>
+              <path id="oracle-arc" class="arc oracle-arc"></path>
+              <path id="rotation-arc" class="arc rotation-arc"></path>
+              <line id="state-vector" class="vector state-vector" marker-end="url(#arrow-state)"></line>
+              <line id="oracle-vector" class="vector oracle-vector" marker-end="url(#arrow-oracle)"></line>
+              <line id="next-vector" class="vector next-vector" marker-end="url(#arrow-diffusion)"></line>
+              <circle id="state-point" class="vector-point state-point" r="6"></circle>
+              <circle id="oracle-point" class="vector-point oracle-point" r="5"></circle>
+              <circle id="next-point" class="vector-point next-point" r="5"></circle>
+              <text id="bad-label" class="svg-label label-bad">bad axis</text>
+              <text id="good-label" class="svg-label label-good">good axis</text>
+              <text id="s-label" class="svg-label small label-state">|s></text>
+              <text id="theta-label" class="svg-label small label-state">theta</text>
+              <text id="oracle-label" class="svg-label small label-oracle">oracle reflection</text>
+              <text id="diffusion-label" class="svg-label small label-diffusion">diffusion reflection</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="readout-strip" aria-label="Main readouts">
+          <div class="readout">
+            <span class="readout-label">Good probability</span>
+            <span class="readout-value" id="success-readout">0%</span>
+          </div>
+          <div class="readout">
+            <span class="readout-label">State angle</span>
+            <span class="readout-value" id="angle-readout">0 deg</span>
+          </div>
+          <div class="readout">
+            <span class="readout-label">One iteration rotates</span>
+            <span class="readout-value" id="rotation-readout">0 deg</span>
+          </div>
+        </div>
+      </div>
+
+      <aside>
+        <div class="panel" aria-label="Grover controls">
+          <div class="control-group">
+            <div class="control-title">
+              <label for="marked-slider">Marked fraction M/N</label>
+              <span class="value-pill" id="marked-value">1/64</span>
+            </div>
+            <div class="range-row">
+              <input id="marked-slider" type="range" min="0" max="50" value="6" step="1">
+              <div class="hint-row">
+                <span>rare good states</span>
+                <span>many good states</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <div class="control-title">
+              <label for="iteration-slider">Grover iterations</label>
+              <span class="value-pill" id="iteration-value">0</span>
+            </div>
+            <div class="range-row">
+              <input id="iteration-slider" type="range" min="0" max="20" value="0" step="1">
+              <div class="hint-row">
+                <span>start at |s></span>
+                <span id="optimal-hint">best near 6</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <div class="button-row" role="group" aria-label="Iteration controls">
+              <button class="icon-button" type="button" id="prev-button" title="Previous step" aria-label="Previous step">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
+              <button class="icon-button primary" type="button" id="play-button" title="Play iterations" aria-label="Play iterations">
+                <svg id="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"></path></svg>
+              </button>
+              <button class="icon-button" type="button" id="next-button" title="Next step" aria-label="Next step">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
+              <button class="icon-button" type="button" id="reset-button" title="Reset" aria-label="Reset">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v6h6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <div class="control-title">View</div>
+            <div class="toggle-row">
+              <label class="toggle">
+                <input id="trail-toggle" type="checkbox" checked>
+                Trail
+              </label>
+              <label class="toggle">
+                <input id="reflections-toggle" type="checkbox" checked>
+                Reflections
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" aria-label="Numerical details">
+          <div class="stats">
+            <div class="stat">
+              <span class="stat-label">Initial angle theta</span>
+              <span class="stat-value" id="theta-stat">0 deg</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Current angle</span>
+              <span class="stat-value" id="current-angle-stat">0 deg</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Amplitude pair</span>
+              <span class="stat-value" id="amplitude-stat"><code>(0, 0)</code></span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Optimal k</span>
+              <span class="stat-value" id="optimal-stat">0</span>
+            </div>
+          </div>
+          <div class="success-meter" aria-hidden="true">
+            <div class="success-fill" id="success-fill"></div>
+          </div>
+          <div class="notes" id="note">
+            Iteration 0 starts at the equal superposition. Each oracle plus diffusion pair advances the state by 2 theta in this two-dimensional plane.
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const svg = document.getElementById("grover-svg");
+      const els = {
+        badAxis: document.getElementById("bad-axis"),
+        goodAxis: document.getElementById("good-axis"),
+        sAxis: document.getElementById("s-axis"),
+        reflectionLine: document.getElementById("reflection-line"),
+        goodBand: document.getElementById("good-band"),
+        badBand: document.getElementById("bad-band"),
+        trail: document.getElementById("trail"),
+        trailDots: document.getElementById("trail-dots"),
+        thetaArc: document.getElementById("theta-arc"),
+        oracleArc: document.getElementById("oracle-arc"),
+        rotationArc: document.getElementById("rotation-arc"),
+        stateVector: document.getElementById("state-vector"),
+        oracleVector: document.getElementById("oracle-vector"),
+        nextVector: document.getElementById("next-vector"),
+        statePoint: document.getElementById("state-point"),
+        oraclePoint: document.getElementById("oracle-point"),
+        nextPoint: document.getElementById("next-point"),
+        badLabel: document.getElementById("bad-label"),
+        goodLabel: document.getElementById("good-label"),
+        sLabel: document.getElementById("s-label"),
+        thetaLabel: document.getElementById("theta-label"),
+        oracleLabel: document.getElementById("oracle-label"),
+        diffusionLabel: document.getElementById("diffusion-label"),
+        markedSlider: document.getElementById("marked-slider"),
+        iterationSlider: document.getElementById("iteration-slider"),
+        markedValue: document.getElementById("marked-value"),
+        iterationValue: document.getElementById("iteration-value"),
+        optimalHint: document.getElementById("optimal-hint"),
+        prevButton: document.getElementById("prev-button"),
+        playButton: document.getElementById("play-button"),
+        playIcon: document.getElementById("play-icon"),
+        nextButton: document.getElementById("next-button"),
+        resetButton: document.getElementById("reset-button"),
+        trailToggle: document.getElementById("trail-toggle"),
+        reflectionsToggle: document.getElementById("reflections-toggle"),
+        successReadout: document.getElementById("success-readout"),
+        angleReadout: document.getElementById("angle-readout"),
+        rotationReadout: document.getElementById("rotation-readout"),
+        thetaStat: document.getElementById("theta-stat"),
+        currentAngleStat: document.getElementById("current-angle-stat"),
+        amplitudeStat: document.getElementById("amplitude-stat"),
+        optimalStat: document.getElementById("optimal-stat"),
+        successFill: document.getElementById("success-fill"),
+        note: document.getElementById("note"),
+        tabs: Array.from(document.querySelectorAll(".tab"))
+      };
+
+      const cx = 350;
+      const cy = 330;
+      const radius = 230;
+      const stateLength = 206;
+      const maxIteration = Number(els.iterationSlider.max);
+
+      let stage = 0;
+      let isPlaying = false;
+      let playTimer = null;
+
+      const markedOptions = [
+        { label: "1/256", p: 1 / 256 },
+        { label: "1/192", p: 1 / 192 },
+        { label: "1/128", p: 1 / 128 },
+        { label: "1/96", p: 1 / 96 },
+        { label: "1/80", p: 1 / 80 },
+        { label: "1/64", p: 1 / 64 },
+        { label: "1/48", p: 1 / 48 },
+        { label: "1/32", p: 1 / 32 },
+        { label: "1/24", p: 1 / 24 },
+        { label: "1/16", p: 1 / 16 },
+        { label: "1/12", p: 1 / 12 },
+        { label: "1/10", p: 1 / 10 },
+        { label: "1/8", p: 1 / 8 },
+        { label: "1/6", p: 1 / 6 },
+        { label: "1/5", p: 1 / 5 },
+        { label: "1/4", p: 1 / 4 },
+        { label: "1/3", p: 1 / 3 },
+        { label: "2/5", p: 2 / 5 },
+        { label: "1/2", p: 1 / 2 }
+      ];
+
+      els.markedSlider.max = markedOptions.length - 1;
+      els.markedSlider.value = 5;
+
+      const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+      const toDeg = radians => radians * 180 / Math.PI;
+      const fmtDeg = radians => `${toDeg(radians).toFixed(1)} deg`;
+      const fmtPercent = value => `${(value * 100).toFixed(value < 0.01 ? 2 : 1)}%`;
+      const fmtAmp = value => {
+        const n = Math.abs(value) < 0.0005 ? 0 : value;
+        return n.toFixed(3);
+      };
+
+      function point(angle, length = stateLength) {
+        return {
+          x: cx + Math.cos(angle) * length,
+          y: cy - Math.sin(angle) * length
+        };
+      }
+
+      function setLine(el, from, to) {
+        el.setAttribute("x1", from.x);
+        el.setAttribute("y1", from.y);
+        el.setAttribute("x2", to.x);
+        el.setAttribute("y2", to.y);
+      }
+
+      function setPoint(el, p) {
+        el.setAttribute("cx", p.x);
+        el.setAttribute("cy", p.y);
+      }
+
+      function arcPath(startAngle, endAngle, r) {
+        const start = point(startAngle, r);
+        const end = point(endAngle, r);
+        const delta = Math.abs(endAngle - startAngle);
+        const large = delta > Math.PI ? 1 : 0;
+        const sweep = endAngle > startAngle ? 0 : 1;
+        return `M ${start.x.toFixed(3)} ${start.y.toFixed(3)} A ${r} ${r} 0 ${large} ${sweep} ${end.x.toFixed(3)} ${end.y.toFixed(3)}`;
+      }
+
+      function shortestDelta(startAngle, endAngle) {
+        return Math.atan2(Math.sin(endAngle - startAngle), Math.cos(endAngle - startAngle));
+      }
+
+      function localArcPath(startAngle, endAngle, r) {
+        const delta = shortestDelta(startAngle, endAngle);
+        if (Math.abs(delta) < 0.0001) {
+          return "";
+        }
+        return arcPath(startAngle, startAngle + delta, r);
+      }
+
+      function localMidAngle(startAngle, endAngle) {
+        return startAngle + shortestDelta(startAngle, endAngle) / 2;
+      }
+
+      function wedgePath(startAngle, endAngle, r) {
+        const start = point(startAngle, r);
+        const end = point(endAngle, r);
+        const delta = Math.abs(endAngle - startAngle);
+        const large = delta > Math.PI ? 1 : 0;
+        const sweep = endAngle > startAngle ? 0 : 1;
+        return `M ${cx} ${cy} L ${start.x.toFixed(3)} ${start.y.toFixed(3)} A ${r} ${r} 0 ${large} ${sweep} ${end.x.toFixed(3)} ${end.y.toFixed(3)} Z`;
+      }
+
+      function currentModel() {
+        const marked = markedOptions[Number(els.markedSlider.value)];
+        const theta = Math.asin(Math.sqrt(marked.p));
+        const iteration = Number(els.iterationSlider.value);
+        const currentAngle = theta + 2 * iteration * theta;
+        const oracleAngle = -currentAngle;
+        const nextAngle = 2 * theta - oracleAngle;
+        const optimal = Math.max(0, Math.round(Math.PI / (4 * theta) - 0.5));
+        const cappedOptimal = clamp(optimal, 0, maxIteration);
+        return {
+          marked,
+          theta,
+          iteration,
+          currentAngle,
+          oracleAngle,
+          nextAngle,
+          optimal,
+          cappedOptimal,
+          success: Math.sin(currentAngle) ** 2,
+          nextSuccess: Math.sin(nextAngle) ** 2
+        };
+      }
+
+      function syncIterationBounds(model) {
+        const dynamicMax = Math.max(20, model.optimal + 8);
+        if (Number(els.iterationSlider.max) !== dynamicMax) {
+          els.iterationSlider.max = dynamicMax;
+        }
+      }
+
+      function setVisible(el, visible) {
+        el.style.display = visible ? "" : "none";
+      }
+
+      function updateTabs() {
+        els.tabs.forEach(button => {
+          button.setAttribute("aria-pressed", String(Number(button.dataset.stage) === stage));
+        });
+      }
+
+      function drawAxes(model) {
+        const origin = { x: cx, y: cy };
+        setLine(els.badAxis, { x: cx - radius * 0.88, y: cy }, { x: cx + radius, y: cy });
+        setLine(els.goodAxis, { x: cx, y: cy + radius * 0.88 }, { x: cx, y: cy - radius });
+        setLine(els.sAxis, origin, point(model.theta, radius * 0.96));
+        setLine(els.reflectionLine, point(model.theta + Math.PI, radius * 0.74), point(model.theta, radius * 0.98));
+
+        els.badLabel.setAttribute("x", cx + radius - 78);
+        els.badLabel.setAttribute("y", cy + 30);
+        els.goodLabel.setAttribute("x", cx + 14);
+        els.goodLabel.setAttribute("y", cy - radius + 18);
+
+        const sLabelPoint = point(model.theta, radius * 1.03);
+        els.sLabel.setAttribute("x", sLabelPoint.x + 8);
+        els.sLabel.setAttribute("y", sLabelPoint.y - 4);
+
+        const thetaLabelPoint = point(model.theta * 0.5, 63);
+        els.thetaLabel.setAttribute("x", thetaLabelPoint.x + 6);
+        els.thetaLabel.setAttribute("y", thetaLabelPoint.y + 4);
+
+        els.thetaArc.setAttribute("d", arcPath(0, model.theta, 48));
+        els.goodBand.setAttribute("d", wedgePath(0, Math.PI / 2, 44));
+        els.badBand.setAttribute("d", wedgePath(-0.16, 0.16, radius * 0.98));
+      }
+
+      function drawTrail(model) {
+        els.trailDots.replaceChildren();
+        const count = Math.min(Number(els.iterationSlider.max), model.optimal + 8);
+        let path = "";
+        for (let k = 0; k <= count; k += 1) {
+          const angle = model.theta + 2 * k * model.theta;
+          const p = point(angle, stateLength);
+          path += `${k === 0 ? "M" : "L"} ${p.x.toFixed(3)} ${p.y.toFixed(3)} `;
+          const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          dot.setAttribute("cx", p.x);
+          dot.setAttribute("cy", p.y);
+          dot.setAttribute("r", k === model.iteration ? "4.8" : "3.2");
+          dot.setAttribute("class", "trail-dot");
+          els.trailDots.appendChild(dot);
+        }
+        els.trail.setAttribute("d", path.trim());
+      }
+
+      function drawVectors(model) {
+        const origin = { x: cx, y: cy };
+        const current = point(model.currentAngle);
+        const oracle = point(model.oracleAngle);
+        const next = point(model.nextAngle);
+
+        setLine(els.stateVector, origin, current);
+        setLine(els.oracleVector, origin, oracle);
+        setLine(els.nextVector, origin, next);
+        setPoint(els.statePoint, current);
+        setPoint(els.oraclePoint, oracle);
+        setPoint(els.nextPoint, next);
+
+        const showOracle = stage >= 1 && els.reflectionsToggle.checked;
+        const showNext = stage >= 2 && els.reflectionsToggle.checked;
+        setVisible(els.oracleVector, showOracle);
+        setVisible(els.oraclePoint, showOracle);
+        setVisible(els.nextVector, showNext);
+        setVisible(els.nextPoint, showNext);
+        setVisible(els.reflectionLine, showNext);
+
+        els.oracleArc.setAttribute("d", localArcPath(model.currentAngle, model.oracleAngle, 178));
+        setVisible(els.oracleArc, showOracle);
+
+        els.rotationArc.setAttribute("d", localArcPath(model.oracleAngle, model.nextAngle, 200));
+        setVisible(els.rotationArc, showNext);
+
+        const oracleLabelPoint = point(localMidAngle(model.currentAngle, model.oracleAngle), 190);
+        els.oracleLabel.setAttribute("x", oracleLabelPoint.x - 82);
+        els.oracleLabel.setAttribute("y", oracleLabelPoint.y + 18);
+        setVisible(els.oracleLabel, showOracle);
+
+        const diffusionLabelPoint = point(localMidAngle(model.oracleAngle, model.nextAngle), 218);
+        els.diffusionLabel.setAttribute("x", diffusionLabelPoint.x - 78);
+        els.diffusionLabel.setAttribute("y", diffusionLabelPoint.y - 10);
+        setVisible(els.diffusionLabel, showNext);
+      }
+
+      function updateReadouts(model) {
+        els.markedValue.textContent = model.marked.label;
+        els.iterationValue.textContent = model.iteration;
+        els.successReadout.textContent = fmtPercent(model.success);
+        els.angleReadout.textContent = fmtDeg(model.currentAngle);
+        els.rotationReadout.textContent = fmtDeg(2 * model.theta);
+        els.thetaStat.textContent = fmtDeg(model.theta);
+        els.currentAngleStat.textContent = fmtDeg(model.currentAngle);
+        els.amplitudeStat.innerHTML = `<code>(${fmtAmp(Math.cos(model.currentAngle))}, ${fmtAmp(Math.sin(model.currentAngle))})</code>`;
+        els.optimalStat.textContent = model.optimal;
+        els.optimalHint.textContent = `best near ${model.optimal}`;
+        els.successFill.style.width = `${clamp(model.success * 100, 0, 100)}%`;
+
+        const overshoot = model.iteration > model.optimal && model.success < Math.sin(model.theta + 2 * model.optimal * model.theta) ** 2;
+        if (overshoot) {
+          els.note.textContent = "The state has passed the good axis peak, so extra Grover iterations begin reducing success probability.";
+        } else if (model.marked.p > 0.25) {
+          els.note.textContent = "When many states are already good, the starting vector is close to the good axis and a full Grover step can overshoot quickly.";
+        } else {
+          els.note.textContent = "Each oracle plus diffusion pair advances the state by 2 theta in this two-dimensional plane.";
+        }
+      }
+
+      function render() {
+        const model = currentModel();
+        syncIterationBounds(model);
+        drawAxes(model);
+        drawTrail(model);
+        drawVectors(model);
+        updateReadouts(model);
+        updateTabs();
+
+        const showTrail = els.trailToggle.checked;
+        setVisible(els.trail, showTrail);
+        setVisible(els.trailDots, showTrail);
+      }
+
+      function setIteration(value) {
+        const next = clamp(value, Number(els.iterationSlider.min), Number(els.iterationSlider.max));
+        els.iterationSlider.value = next;
+        render();
+      }
+
+      function goToStage(targetStage) {
+        if (stage === 2 && targetStage === 0) {
+          stage = 0;
+          setIteration(Number(els.iterationSlider.value) + 1);
+          return;
+        }
+        stage = targetStage;
+        render();
+      }
+
+      function advanceSubstep() {
+        if (stage < 2) {
+          stage += 1;
+          render();
+          return;
+        }
+        stage = 0;
+        setIteration(Number(els.iterationSlider.value) + 1);
+      }
+
+      function rewindSubstep() {
+        if (stage > 0) {
+          stage -= 1;
+          render();
+          return;
+        }
+
+        const current = Number(els.iterationSlider.value);
+        if (current > 0) {
+          stage = 2;
+          setIteration(current - 1);
+          return;
+        }
+
+        render();
+      }
+
+      function setPlaying(next) {
+        isPlaying = next;
+        els.playButton.setAttribute("aria-label", isPlaying ? "Pause iterations" : "Play iterations");
+        els.playButton.setAttribute("title", isPlaying ? "Pause iterations" : "Play iterations");
+        els.playIcon.innerHTML = isPlaying
+          ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"></path>'
+          : '<path d="M8 5v14l11-7z" fill="currentColor"></path>';
+
+        if (playTimer) {
+          window.clearInterval(playTimer);
+          playTimer = null;
+        }
+
+        if (isPlaying) {
+          playTimer = window.setInterval(() => {
+            const current = Number(els.iterationSlider.value);
+            const max = Number(els.iterationSlider.max);
+            if (stage === 2 && current >= max) {
+              stage = 0;
+              setIteration(0);
+            } else {
+              advanceSubstep();
+            }
+          }, 850);
+        }
+      }
+
+      els.tabs.forEach(button => {
+        button.addEventListener("click", () => {
+          goToStage(Number(button.dataset.stage));
+        });
+      });
+
+      els.markedSlider.addEventListener("input", () => {
+        const model = currentModel();
+        syncIterationBounds(model);
+        const current = Number(els.iterationSlider.value);
+        if (current > Number(els.iterationSlider.max)) {
+          els.iterationSlider.value = els.iterationSlider.max;
+        }
+        render();
+      });
+
+      els.iterationSlider.addEventListener("input", render);
+      els.trailToggle.addEventListener("change", render);
+      els.reflectionsToggle.addEventListener("change", render);
+      els.prevButton.addEventListener("click", rewindSubstep);
+      els.nextButton.addEventListener("click", advanceSubstep);
+      els.resetButton.addEventListener("click", () => {
+        stage = 0;
+        setPlaying(false);
+        setIteration(0);
+      });
+      els.playButton.addEventListener("click", () => setPlaying(!isPlaying));
+
+      svg.addEventListener("pointerdown", event => {
+        const pointInSvg = svg.createSVGPoint();
+        pointInSvg.x = event.clientX;
+        pointInSvg.y = event.clientY;
+        const cursor = pointInSvg.matrixTransform(svg.getScreenCTM().inverse());
+        const dx = cursor.x - cx;
+        const dy = cy - cursor.y;
+        const angle = Math.atan2(dy, dx);
+        if (angle > 0 && angle < Math.PI / 2) {
+          const p = Math.sin(angle) ** 2;
+          const nearest = markedOptions.reduce((best, option, index) => {
+            const delta = Math.abs(option.p - p);
+            return delta < best.delta ? { index, delta } : best;
+          }, { index: 0, delta: Infinity });
+          els.markedSlider.value = nearest.index;
+          stage = 0;
+          setIteration(0);
+        }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
