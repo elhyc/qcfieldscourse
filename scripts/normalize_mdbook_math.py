@@ -9,22 +9,39 @@ from pathlib import Path
 
 INLINE_DOLLAR = re.compile(r"(?<!\\)\$(?!\$)(.+?)(?<!\\)\$(?!\$)")
 SINGLE_LINE_DISPLAY = re.compile(r"(?<!\\)\$\$(.+?)(?<!\\)\$\$")
-MARKDOWN_ESCAPE_IN_MATH = re.compile(r"(?<!\\)([_*|])")
+MARKDOWN_ESCAPE_IN_MATH = re.compile(r"(?<!\\)([_*])")
+LOCAL_BRAKET_MACRO = re.compile(
+    r"(?m)^\$\$\\(?:re)?newcommand\{\\(?:ket|bra)\}\[1\]\{[^$\n]+\}\$\$\s*\n?"
+)
+DISPLAY_ENV_START = re.compile(r"^\\begin\{(equation\*?|align\*?)\}\s*$")
+DISPLAY_ENV_END = re.compile(r"^\\end\{(equation\*?|align\*?)\}\s*$")
+TRAILING_WHITESPACE = re.compile(r"[ \t]+(?=\r?\n|$)")
+BRAKET_DEFINITIONS = (
+    r"\\(\def\ket#1{\left|#1\right\rangle}"
+    r"\def\bra#1{\left\langle#1\right|}\\)"
+)
 
 
-def normalize_macros(text: str) -> str:
-    """Use TeX definitions that can be safely repeated across notebook cells."""
-    return (
-        text.replace(r"\renewcommand{\ket}[1]{|#1\rangle}", r"\def\ket#1{|#1\rangle}")
-        .replace(r"\renewcommand{\bra}[1]{\langle#1|}", r"\def\bra#1{\langle#1|}")
-        .replace(r"\newcommand{\ket}[1]{|#1\rangle}", r"\def\ket#1{|#1\rangle}")
-        .replace(r"\newcommand{\bra}[1]{\langle#1|}", r"\def\bra#1{\langle#1|}")
-    )
+def strip_repeated_braket_macros(text: str) -> str:
+    """Remove notebook-local braket macro cells; one page-level definition is inserted later."""
+    return LOCAL_BRAKET_MACRO.sub("", text)
+
+
+def needs_braket_macros(text: str) -> bool:
+    return r"\ket" in text or r"\bra" in text
 
 
 def escape_display_linebreaks(text: str) -> str:
     """mdBook needs TeX linebreaks doubled inside display math blocks."""
     return text.replace(r"\\", r"\\\\")
+
+
+def line_ending(line: str) -> str:
+    if line.endswith("\r\n"):
+        return "\r\n"
+    if line.endswith("\n"):
+        return "\n"
+    return ""
 
 
 def escape_markdown_in_math(text: str) -> str:
@@ -47,11 +64,14 @@ def normalize_inline_math(text: str) -> str:
 
 
 def normalize_markdown(text: str) -> str:
-    text = normalize_macros(text)
+    inject_braket_macros = needs_braket_macros(text)
+    text = strip_repeated_braket_macros(text)
     lines = text.splitlines(keepends=True)
     output: list[str] = []
     in_fence = False
+    in_html_comment = False
     in_display = False
+    in_display_env: str | None = None
 
     for line in lines:
         stripped = line.strip()
@@ -63,6 +83,38 @@ def normalize_markdown(text: str) -> str:
 
         if in_fence:
             output.append(line)
+            continue
+
+        if in_html_comment:
+            output.append(line)
+            if "-->" in stripped:
+                in_html_comment = False
+            continue
+
+        if stripped.startswith("<!--"):
+            output.append(line)
+            if "-->" not in stripped:
+                in_html_comment = True
+            continue
+
+        if in_display_env is not None:
+            end_match = DISPLAY_ENV_END.match(stripped)
+            if end_match and end_match.group(1) == in_display_env:
+                if in_display_env.startswith("align"):
+                    output.append(r"\end{aligned}" + line_ending(line))
+                output.append(r"\\]" + line_ending(line))
+                in_display_env = None
+            else:
+                line = escape_display_linebreaks(line)
+                output.append(escape_markdown_in_math(line))
+            continue
+
+        start_match = DISPLAY_ENV_START.match(stripped)
+        if start_match:
+            in_display_env = start_match.group(1)
+            output.append(r"\\[" + line_ending(line))
+            if in_display_env.startswith("align"):
+                output.append(r"\begin{aligned}" + line_ending(line))
             continue
 
         if in_display:
@@ -93,7 +145,11 @@ def normalize_markdown(text: str) -> str:
         line = normalize_inline_math(line)
         output.append(line)
 
-    return "".join(output)
+    normalized = TRAILING_WHITESPACE.sub("", "".join(output))
+    if inject_braket_macros and not normalized.startswith(BRAKET_DEFINITIONS):
+        return f"{BRAKET_DEFINITIONS}\n\n{normalized}"
+
+    return normalized
 
 
 def main() -> None:
