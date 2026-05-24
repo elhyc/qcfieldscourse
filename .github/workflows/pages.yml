@@ -36,11 +36,15 @@ jobs:
       - name: Install notebook converter
         run: python -m pip install nbconvert
 
-      - name: Convert notebook to mdBook chapter
-        run: python -m jupyter nbconvert --to markdown qc1.ipynb --output part-1 --output-dir src
+      - name: Convert notebooks to mdBook chapters
+        run: |
+          python -m jupyter nbconvert --to markdown qc1.ipynb --output part-1 --output-dir src
+          python -m jupyter nbconvert --to markdown qc2.ipynb --output part-2 --output-dir src
 
       - name: Normalize notebook math for mdBook
-        run: python scripts/normalize_mdbook_math.py src/part-1.md
+        run: |
+          python scripts/normalize_mdbook_math.py src/part-1.md
+          python scripts/normalize_mdbook_math.py src/part-2.md
 
       - name: Copy notebook image assets
         run: |
