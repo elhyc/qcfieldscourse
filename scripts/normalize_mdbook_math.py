@@ -15,6 +15,8 @@ LOCAL_BRAKET_MACRO = re.compile(
 )
 DISPLAY_ENV_START = re.compile(r"^\\begin\{(equation\*?|align\*?)\}\s*$")
 DISPLAY_ENV_END = re.compile(r"^\\end\{(equation\*?|align\*?)\}\s*$")
+LEADING_LIST_MARKER_IN_MATH = re.compile(r"^([ \t]{0,3})([-+])([ \t]+)")
+LEADING_ORDERED_MARKER_IN_MATH = re.compile(r"^([ \t]{0,3})(\d+)([.)])([ \t]+)")
 TRAILING_WHITESPACE = re.compile(r"[ \t]+(?=\r?\n|$)")
 BRAKET_DEFINITIONS = (
     r"\\(\def\ket#1{\left|#1\right\rangle}"
@@ -49,6 +51,18 @@ def escape_markdown_in_math(text: str) -> str:
     return MARKDOWN_ESCAPE_IN_MATH.sub(r"\\\1", text)
 
 
+def escape_display_block_markers(line: str) -> str:
+    """Prevent display-math rows from becoming Markdown lists before MathJax runs."""
+    line = LEADING_LIST_MARKER_IN_MATH.sub(r"\1\\\2\3", line, count=1)
+    return LEADING_ORDERED_MARKER_IN_MATH.sub(r"\1\2\\\3\4", line, count=1)
+
+
+def normalize_display_math_line(line: str) -> str:
+    line = escape_display_block_markers(line)
+    line = escape_display_linebreaks(line)
+    return escape_markdown_in_math(line)
+
+
 def normalize_inline_math(text: str) -> str:
     """Convert Jupyter-style inline dollars outside inline code spans."""
     parts = re.split(r"(`+[^`]*`+)", text)
@@ -71,6 +85,7 @@ def normalize_markdown(text: str) -> str:
     in_fence = False
     in_html_comment = False
     in_display = False
+    in_mdbook_display = False
     in_display_env: str | None = None
 
     for line in lines:
@@ -97,6 +112,20 @@ def normalize_markdown(text: str) -> str:
                 in_html_comment = True
             continue
 
+        if in_mdbook_display:
+            if stripped == r"\\]":
+                output.append(line)
+                in_mdbook_display = False
+            else:
+                line = escape_display_block_markers(line)
+                output.append(escape_markdown_in_math(line))
+            continue
+
+        if stripped == r"\\[":
+            output.append(line)
+            in_mdbook_display = True
+            continue
+
         if in_display_env is not None:
             end_match = DISPLAY_ENV_END.match(stripped)
             if end_match and end_match.group(1) == in_display_env:
@@ -105,8 +134,7 @@ def normalize_markdown(text: str) -> str:
                 output.append(r"\\]" + line_ending(line))
                 in_display_env = None
             else:
-                line = escape_display_linebreaks(line)
-                output.append(escape_markdown_in_math(line))
+                output.append(normalize_display_math_line(line))
             continue
 
         start_match = DISPLAY_ENV_START.match(stripped)
@@ -122,8 +150,7 @@ def normalize_markdown(text: str) -> str:
                 output.append(line.replace("$$", r"\\]", 1))
                 in_display = False
             else:
-                line = escape_display_linebreaks(line)
-                output.append(escape_markdown_in_math(line))
+                output.append(normalize_display_math_line(line))
             continue
 
         if stripped == "$$":

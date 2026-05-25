@@ -1,5 +1,9 @@
 # Quantum Computing: a Crash Course
 
+
+Foreword:
+
+
 <!-- These notes are organized as an interactive textbook.
 
 Use the sidebar to move between chapters. The notebook chapters are available here:

@@ -278,7 +278,7 @@ Therefore, if we consider \\(G\\) as an operator acting on the \\(2\\)-dimension
 G =
 \begin{pmatrix}
  \frac{N - 2M }{N}   &   2 \frac{ \sqrt{ N \cdot M } } {N}   \\\\
- - 2 \frac{ \sqrt{ N \cdot M } } {N}   &  \frac{N - 2M }{N}
+ \- 2 \frac{ \sqrt{ N \cdot M } } {N}   &  \frac{N - 2M }{N}
 \end{pmatrix}
 \\]
 
@@ -328,7 +328,7 @@ and that
 \\[
 G =  \begin{pmatrix}
  \frac{N - 2M }{N}   &   2 \frac{ \sqrt{ N \cdot M } } {N}   \\\\
- - 2 \frac{ \sqrt{ N \cdot M } } {N}   &  \frac{N - 2M }{N}
+ \- 2 \frac{ \sqrt{ N \cdot M } } {N}   &  \frac{N - 2M }{N}
 \end{pmatrix}
 = \begin{pmatrix}
 \cos(2 \theta) & -\sin(2 \theta) \\\\
