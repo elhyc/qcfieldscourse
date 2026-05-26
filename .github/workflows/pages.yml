@@ -66,8 +66,8 @@ jobs:
           mkdir -p book/applets
           cp -r src/applets/* book/applets/
 
-      - name: Preserve existing HTML notes
-        run: cp qc1.html book/qc1.html
+      # - name: Preserve existing HTML notes
+      #   run: cp qc1.html book/qc1.html
 
       - name: Disable Jekyll
         run: touch book/.nojekyll
