@@ -23,7 +23,7 @@ This mini-course is roughly organized into 5 parts:
 5. Finally, we will move onto quantum error correction for the fifth part of this mini-course. 
 
 
-If you are running this code locally, you should be sure to head over to https://www.ibm.com/quantum/qiskit and install qiskit. Otherwise, you can follow along or open up these notebooks in [Google colab](https://colab.research.google.com/). I believe that qiskit is readily available on Google colab and does not require any further downloading or installing. 
+If you are running this code locally, you should head over to [ibm/qiskit](https://www.ibm.com/quantum/qiskit) and install qiskit. Otherwise, you can follow along or open up these notebooks in [Google colab](https://colab.research.google.com/). I believe that qiskit is readily available on Google colab and does not require any further downloading or installing. 
 
 <!-- These notes are organized as an interactive textbook.
 
