@@ -1,6 +1,6 @@
 # Summary
 
-- [Introduction](introduction.md)
+- [Preface](preface.md)
 - [Part I: Introduction and Foundations](part-1.md)
 - [Part II: Circuits and Algorithms, Grover Search](part-2.md)
 - [Part III: Quantum Fourier Transform and Phase Estimation](part-3.md)
