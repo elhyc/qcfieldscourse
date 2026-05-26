@@ -9,6 +9,8 @@ from pathlib import Path
 
 INLINE_DOLLAR = re.compile(r"(?<!\\)\$(?!\$)(.+?)(?<!\\)\$(?!\$)")
 SINGLE_LINE_DISPLAY = re.compile(r"(?<!\\)\$\$(.+?)(?<!\\)\$\$")
+TRAILING_DISPLAY_DOLLARS = re.compile(r"(?<!\\)\$\$[ \t]*(?:\r?\n)?$")
+TRAILING_MDBOOK_DISPLAY_CLOSE = re.compile(r"(?<!\\)\\\\\][ \t]*(?:\r?\n)?$")
 MARKDOWN_ESCAPE_IN_MATH = re.compile(r"(?<!\\)([_*])")
 LOCAL_BRAKET_MACRO = re.compile(
     r"(?m)^\$\$\\(?:re)?newcommand\{\\(?:ket|bra)\}\[1\]\{[^$\n]+\}\$\$\s*\n?"
@@ -63,6 +65,20 @@ def normalize_display_math_line(line: str) -> str:
     return escape_markdown_in_math(line)
 
 
+def split_trailing_display_dollars(line: str) -> tuple[str, str] | None:
+    match = TRAILING_DISPLAY_DOLLARS.search(line)
+    if match is None:
+        return None
+    return line[: match.start()], line_ending(line)
+
+
+def split_trailing_mdbook_display_close(line: str) -> tuple[str, str] | None:
+    match = TRAILING_MDBOOK_DISPLAY_CLOSE.search(line)
+    if match is None:
+        return None
+    return line[: match.start()], line_ending(line)
+
+
 def normalize_inline_math(text: str) -> str:
     """Convert Jupyter-style inline dollars outside inline code spans."""
     parts = re.split(r"(`+[^`]*`+)", text)
@@ -113,8 +129,19 @@ def normalize_markdown(text: str) -> str:
             continue
 
         if in_mdbook_display:
-            if stripped == r"\\]":
-                output.append(line)
+            if close := split_trailing_mdbook_display_close(line):
+                content, ending = close
+                if content.strip():
+                    content = escape_display_block_markers(content)
+                    output.append(escape_markdown_in_math(content) + ending)
+                output.append(r"\\]" + ending)
+                in_mdbook_display = False
+            elif close := split_trailing_display_dollars(line):
+                content, ending = close
+                if content.strip():
+                    content = escape_display_block_markers(content)
+                    output.append(escape_markdown_in_math(content) + ending)
+                output.append(r"\\]" + ending)
                 in_mdbook_display = False
             else:
                 line = escape_display_block_markers(line)
@@ -124,6 +151,29 @@ def normalize_markdown(text: str) -> str:
         if stripped == r"\\[":
             output.append(line)
             in_mdbook_display = True
+            continue
+
+        if in_display:
+            start_match = DISPLAY_ENV_START.match(stripped)
+            if start_match:
+                if start_match.group(1).startswith("align"):
+                    output.append(r"\begin{aligned}" + line_ending(line))
+                continue
+
+            end_match = DISPLAY_ENV_END.match(stripped)
+            if end_match:
+                if end_match.group(1).startswith("align"):
+                    output.append(r"\end{aligned}" + line_ending(line))
+                continue
+
+            if close := split_trailing_display_dollars(line):
+                content, ending = close
+                if content.strip():
+                    output.append(normalize_display_math_line(content) + ending)
+                output.append(r"\\]" + ending)
+                in_display = False
+            else:
+                output.append(normalize_display_math_line(line))
             continue
 
         if in_display_env is not None:
@@ -143,14 +193,6 @@ def normalize_markdown(text: str) -> str:
             output.append(r"\\[" + line_ending(line))
             if in_display_env.startswith("align"):
                 output.append(r"\begin{aligned}" + line_ending(line))
-            continue
-
-        if in_display:
-            if stripped.startswith("$$"):
-                output.append(line.replace("$$", r"\\]", 1))
-                in_display = False
-            else:
-                output.append(normalize_display_math_line(line))
             continue
 
         if stripped == "$$":

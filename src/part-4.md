@@ -22,10 +22,10 @@ Now let's discuss the details.
 ### Classical reduction of factoring to order-finding
 
 
-Recall that the order of an integer \\(a\\) in \\((\mathbb{Z}/ N \mathbb{Z})^{\times}\\) is the smallest integer \\(r\\) such that \\(a^{r} \equiv 1\\) modulo \\(N\\). The important insight is that if \\(r\\) is even, then we can write \\( (a^{r/2})^{2} \equiv 1 \\)  modulo \\(N\\), or \\((a^{r/2})^{2} - 1 \equiv 0 \, \, (\text{mod } N)\\). This gives us
+Recall that the order of an integer \\(a\\) in \\((\mathbb{Z}/ N \mathbb{Z})^{\times}\\) is the smallest integer \\(r\\) such that \\(a^{r} \equiv 1\\) modulo \\(N\\). The important insight is that if \\(r\\) is even, then we can write \\( (a^{r/2})^{2} \equiv 1 \\)  modulo \\(N\\), or \\((a^{r/2})^{2} - 1 \equiv 0  (\text{mod } N)\\). This gives us
 
 \\[
-( a^{r/2} + 1 )(a ^{r/2} - 1 ) \equiv 0 \, \,(\text{mod } N )
+( a^{r/2} + 1 )(a ^{r/2} - 1 ) \equiv 0 (\text{mod } N )
 \\]
 
 Thus, as long as neither \\(( a^{r/2} + 1 )\\) or \\((a ^{r/2} - 1 )\\) is a multiple of \\(N\\), then we are guaranteed that both \\(( a^{r/2} + 1 )\\) and \\((a ^{r/2} - 1 )\\) have non-trivial common factors with \\(N\\).
@@ -46,20 +46,20 @@ To understand how we can use the quantum phase estimation algorithm to solve the
 with eigenvalues whose values will allow us to compute orders of elements in \\(\mathbb{Z}/N\mathbb{Z}\\). To this end, we consider the operator
 
 \\[
-U\_{x} \ket{y} = \ket{ xy \,  (\text{mod } N)}
+U\_{x} \ket{y} = \ket{ xy (\text{mod } N)}
 \\]
 
 By direct calculation, one can see that the states defined by
 
 \\[
-\ket{u\_{s}} := \frac{1}{\sqrt{r}} \sum\limits\_{k=0}^{r-1} \exp( \frac{ - 2\pi i s k }{r} )  \ket{ x^{k} \, (\text{mod } N)}
+\ket{u\_{s}} := \frac{1}{\sqrt{r}} \sum\limits\_{k=0}^{r-1} \exp( \frac{ - 2\pi i s k }{r} )  \ket{ x^{k}  (\text{mod } N)}
 \\]
 
 for integers \\(0 \leq s \leq r - 1\\) are eigenvectors of \\(U\_{x}\\), where \\(r\\) is the order of \\(x\\) in \\((\mathbb{Z}/N\mathbb{Z})^{\times}\\).
 Indeed, we have that
 
 \\[
-U\_{x} \ket{u\_{s}} = \frac{1}{\sqrt{r}} \sum\limits\_{k=0}^{r-1} \exp( \frac{ - 2\pi i s k }{r} ) \ket{ x^{k + 1} \, (\text{mod } N)}
+U\_{x} \ket{u\_{s}} = \frac{1}{\sqrt{r}} \sum\limits\_{k=0}^{r-1} \exp( \frac{ - 2\pi i s k }{r} ) \ket{ x^{k + 1}  (\text{mod } N)}
 \\]
 
 \\[
