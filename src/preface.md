@@ -1,7 +1,5 @@
 # A candid introduction to Quantum Computing
 
-Foreword: 
-
 These notes are organized as an interactive tutorial on the fundamentals of quantum computing. The pages here
 are markdown conversions of interactive Jupyter notebooks that can be downloaded and executed on either your 
 own computer or with [Google colab](https://colab.research.google.com/) (for example).
