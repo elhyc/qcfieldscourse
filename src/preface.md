@@ -4,9 +4,12 @@ These notes are organized as an interactive tutorial on the fundamentals of quan
 are markdown conversions of interactive Jupyter notebooks that can be downloaded and executed on either your 
 own computer or with [Google colab](https://colab.research.google.com/) (for example).
 
+<!-- 
 
 In full disclosure to the reader, I would like to put it on the record that <b>I am not an expert in this subject</b>. 
-While I have spent a fair bit of time thinking about and digesting this content, I myself am relatively new to the area of quantum computation and information. That being said, the experiences of discovering effective explanations that clicked for me are still relatively fresh in my memory -- and my hope is to share some of that with the reader in this candid introduction to the subject. There are plenty of authoritative references to this material (for example, a classic is "Quantum Computation and Quantum Information" by Nielsen-Chuang), and I encourage anybody seeing this material for the first time to also consult a more authoritative source. My focus in writing these notes was more towards relatability and narrative.
+While I have spent a fair bit of time thinking about and digesting this content, I myself am relatively new to the area of quantum computation and information. That being said, the experiences of discovering effective explanations that clicked for me are still relatively fresh in my memory -- and my hope is to share some of that with the reader in this candid introduction to the subject.  -->
+
+There are plenty of authoritative references to this material (for example, a classic is "Quantum Computation and Quantum Information" by Nielsen-Chuang), and I encourage anybody seeing this material for the first time to also consult a more authoritative source. My focus in writing these notes was more towards relatability and narrative.
 
 This mini-course is roughly organized into 5 parts:
 
