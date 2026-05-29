@@ -1,6 +1,10 @@
 (function () {
   var repo = "elhyc/qcfieldscourse";
-  var preferredCategory = "General";
+  var repoId = "R_kgDOSkQF-Q";
+  var category = {
+    id: "DIC_kwDOSkQF-c4C-GO1",
+    name: "General"
+  };
   var disabledPages = {
     "404.html": true,
     "grover-reflections.html": true,
@@ -85,18 +89,6 @@
     target.textContent = message;
   }
 
-  function chooseCategory(categories) {
-    if (!categories || categories.length === 0) {
-      return null;
-    }
-    for (var i = 0; i < categories.length; i += 1) {
-      if (categories[i].name === preferredCategory) {
-        return categories[i];
-      }
-    }
-    return categories[0];
-  }
-
   function addGiscus(config) {
     var section = makeSection();
     if (!section) {
@@ -137,32 +129,12 @@
       return;
     }
 
-    var endpoint = "https://giscus.app/api/discussions/categories?repo=" + encodeURIComponent(repo);
-    var controller = new AbortController();
-    var timeout = window.setTimeout(function () {
-      controller.abort();
-    }, 4000);
-
     try {
-      var response = await fetch(endpoint, {
-        headers: { Accept: "application/json" },
-        signal: controller.signal
-      });
-      if (!response.ok) {
-        throw new Error("giscus setup is incomplete");
-      }
-      var data = await response.json();
-      var category = chooseCategory(data.categories);
-      if (!data.repositoryId || !category) {
-        throw new Error("no discussion categories are available");
-      }
-      addGiscus({ repositoryId: data.repositoryId, category: category });
+      addGiscus({ repositoryId: repoId, category: category });
     } catch (error) {
       showLocalSetupNote(
         "GitHub Discussions and the giscus app need to be enabled before comments can appear here."
       );
-    } finally {
-      window.clearTimeout(timeout);
     }
   }
 
