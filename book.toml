@@ -6,7 +6,7 @@ src = "src"
 
 [output.html]
 mathjax-support = true
-additional-js = ["mathjax-fallback.js"]
+additional-js = ["mathjax-fallback.js", "comments.js"]
 site-url = "/qcfieldscourse/"
 git-repository-url = "https://github.com/elhyc/qcfieldscourse"
 edit-url-template = "https://github.com/elhyc/qcfieldscourse/edit/main/{path}"
