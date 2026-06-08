@@ -42,6 +42,7 @@ jobs:
           python -m jupyter nbconvert --to markdown qc2.ipynb --output part-2 --output-dir src
           python -m jupyter nbconvert --to markdown qc3.ipynb --output part-3 --output-dir src
           python -m jupyter nbconvert --to markdown qc4.ipynb --output part-4 --output-dir src
+          python -m jupyter nbconvert --to markdown qc5.ipynb --output part-5 --output-dir src
 
       - name: Normalize notebook math for mdBook
         run: |
@@ -49,6 +50,7 @@ jobs:
           python scripts/normalize_mdbook_math.py src/part-2.md
           python scripts/normalize_mdbook_math.py src/part-3.md
           python scripts/normalize_mdbook_math.py src/part-4.md
+          python scripts/normalize_mdbook_math.py src/part-5.md
 
       - name: Copy notebook image assets
         run: |
